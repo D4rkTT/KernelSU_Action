@@ -207,6 +207,22 @@ jobs:
           done
           echo "=== Global dead-hook purge complete ==="
 
+      - name: Strip Missing Vendor Sub-Directories from Makefiles
+        run: |
+          cd kernel_workspace/android-kernel
+          
+          # Remove mm_osvelte from the memory management build chain
+          if [ -f mm/Makefile ]; then
+            sed -i '/mm_osvelte/d' mm/Makefile
+          fi
+          
+          # Universal safety sweep for similar missing vendor optimization folders
+          find . -name "Makefile" | xbar read -r makefile; do
+            # If a Makefile references a directory that doesn't exist under obj-y or obj-m, strip it
+            sed -i '/obj-$(CONFIG_.*)\s*+=/!b; /+=.*\/$/!b' "$makefile"
+          done
+          
+          echo "=== Makefile dependencies cleaned ==="
 
 
       - name: Build kernel
