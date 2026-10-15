@@ -185,20 +185,28 @@ jobs:
         with:
           key: kernel-${{ env.DEVICE }}-${{ env.KSU_VARIANT }}-${{ env.KERNEL_VERSION }}
           max-size: 2G
-      - name: Stripping All Missing OnePlus Code Hooks
+      - name: Global Purge of Missing OnePlus Code Hooks
         run: |
           cd kernel_workspace/android-kernel
           
-          # Delete known broken proprietary tracking lines directly
-          sed -i '/sched_assist/d' init/Kconfig
-          sed -i '/special_opt/d' init/Kconfig
-          sed -i '/oplus_feat/d' init/Kconfig
-          
-          # Ultimate fallback: Clean out any source string that references a folder that doesn't exist
-          sed -i '/source "kernel\/.*\/Kconfig"/d' init/Kconfig
-          
-          echo "=== Patched init/Kconfig Content ==="
-          grep -E "sched_assist|special_opt" init/Kconfig || echo "Successfully stripped broken hooks!"
+          # Find all Kconfig files in the source tree
+          find . -name "Kconfig*" | while read -r kconfig_file; do
+            # Extract lines containing 'source "path/to/Kconfig"'
+            grep -E 'source ".*Kconfig"' "$kconfig_file" | while read -r line; do
+              # Extract the actual file path string from between the quotes
+              target_path=$(echo "$line" | sed -e 's/.*source "//' -e 's/".*//')
+              
+              # If that target file does not physically exist in our tree, delete the hook line
+              if [ ! -f "$target_path" ]; then
+                echo "Removing dead hook for missing file: $target_path inside $kconfig_file"
+                # Escape characters to prevent sed syntax breakage
+                escaped_line=$(echo "$line" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
+                sed -i "/$escaped_line/d" "$kconfig_file"
+              fi
+            done
+          done
+          echo "=== Global dead-hook purge complete ==="
+
 
 
       - name: Build kernel
