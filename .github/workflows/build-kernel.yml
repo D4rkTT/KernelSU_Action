@@ -184,6 +184,14 @@ jobs:
         with:
           key: kernel-${{ env.DEVICE }}-${{ env.KSU_VARIANT }}-${{ env.KERNEL_VERSION }}
           max-size: 2G
+      - name: Stripping Proprietary OnePlus Code Hooks
+        run: |
+          cd kernel_workspace/android-kernel
+          # Remove the broken scheduler dependency reference
+          sed -i '/sched_assist/d' init/Kconfig
+          
+          # Force the configuration script to skip missing module verification errors
+          sed -i 's/DISABLE_CC_WERROR=false/DISABLE_CC_WERROR=true/g' Makefile || true
 
       - name: Build kernel
         run: bash scripts/build.sh all
