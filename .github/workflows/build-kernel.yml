@@ -211,18 +211,32 @@ jobs:
         run: |
           cd kernel_workspace/android-kernel
           
-          # Remove mm_osvelte from the memory management build chain
+          # Remove mm_osvelte from the memory management build chain cleanly
           if [ -f mm/Makefile ]; then
             sed -i '/mm_osvelte/d' mm/Makefile
           fi
           
-          # Universal safety sweep for similar missing vendor optimization folders
-          find . -name "Makefile" | xbar read -r makefile; do
-            # If a Makefile references a directory that doesn't exist under obj-y or obj-m, strip it
-            sed -i '/obj-$(CONFIG_.*)\s*+=/!b; /+=.*\/$/!b' "$makefile"
+          # Fix the loop: Check child directory objects in parent Makefiles
+          # If a Makefile contains a directory compilation directive that doesn't exist, strip it.
+          find . -name "Makefile" | while read -r makefile; do
+            dir_parent=$(dirname "$makefile")
+            
+            # Look for lines that look like obj-y += directory_name/ or core-y += directory_name/
+            grep -E '(obj|core|drivers)-\$\(CONFIG_.*\)|\+=' "$makefile" | grep "/" | while read -r line; do
+              # Extract the directory target name
+              target_dir=$(echo "$line" | sed -e 's/.*+=\s*//' -e 's/\s*$//' -e 's/\///g')
+              
+              # If the folder directory does not physically exist, delete that build line
+              if [ -n "$target_dir" ] && [ ! -d "$dir_parent/$target_dir" ]; then
+                echo "Removing missing directory compilation: $target_dir from $makefile"
+                # Safely escape and delete the broken directory line
+                escaped_line=$(echo "$line" | sed 's/[^^]/[&]/g; s/\^/\\^/g')
+                sed -i "/$escaped_line/d" "$makefile" 2>/dev/null || true
+              fi
+            done
           done
           
-          echo "=== Makefile dependencies cleaned ==="
+          echo "=== Makefile dependencies cleaned successfully ==="
 
 
       - name: Build kernel
