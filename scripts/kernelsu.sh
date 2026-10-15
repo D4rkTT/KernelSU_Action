@@ -56,6 +56,8 @@ ksu_registry() {
 	resukisu)
 		# Re-fork of SukiSU-Ultra aimed at legacy/non-GKI kernels.
 		echo "https://github.com/ReSukiSU/ReSukiSU|main|KernelSU|main|main|-|ReSukiSU" ;;
+	resukisu-ultima)
+		echo "https://github.com/spacealtctrl/ReSukiSU-Ultima|main|KernelSU|main|main|-|ReSukiSU-Ultima" ;;
 	rsuntk)
 		echo "https://github.com/rsuntk/KernelSU|main|KernelSU|main|main|susfs-rksu-master|RKSU (rsuntk)" ;;
 	backslashxx)
